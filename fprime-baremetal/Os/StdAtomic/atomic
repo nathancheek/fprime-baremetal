@@ -87,6 +87,16 @@ public:
         value = desired;
     }
 
+    //! \brief Replace the value
+    //! \param desired The value to store
+    //! \return The previous value
+    //!
+    T exchange(T desired) {
+        T old = value;
+        value = desired;
+        return old;
+    }
+
     //! \brief Compare and exchange (weak version)
     //! \param expected Reference to expected value
     //! \param desired The value to store if comparison succeeds
