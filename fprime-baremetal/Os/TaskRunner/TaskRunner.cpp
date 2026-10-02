@@ -25,30 +25,32 @@ TaskRunner::TaskRunner() {
 TaskRunner::~TaskRunner() {}
 
 void TaskRunner::addTask(Task* task) {
-    FW_ASSERT(task->isCooperative());  // Cannot register uncooperative tasks
     FW_ASSERT(task != nullptr);        // Cannot register a null task
+    FW_ASSERT(task->isCooperative());  // Cannot register uncooperative tasks
 
-    FW_ASSERT(this->m_index < Os::Baremetal::TASK_CAPACITY, static_cast<FwAssertArgType>(this->m_index),
+    // removeTask() keeps the table packed, so the first empty slot is the task count. m_index is the run cursor used
+    // by runNext(), not a count, so it is left alone.
+    FwSizeType count = 0;
+    while ((count < Os::Baremetal::TASK_CAPACITY) && (this->m_task_table[count] != nullptr)) {
+        count++;
+    }
+    FW_ASSERT(count < Os::Baremetal::TASK_CAPACITY, static_cast<FwAssertArgType>(count),
               static_cast<FwAssertArgType>(Os::Baremetal::TASK_CAPACITY));
-    this->m_task_table[this->m_index] = task;
-    this->m_index++;
 
-    // Find the insertion point that keeps the table sorted in descending priority order.
-    FwSizeType insert_pos = this->m_index;
-    for (FwSizeType i = 0; i < this->m_index; i++) {
+    // Insert after every task of greater or equal priority, keeping the table sorted in descending priority order
+    FwSizeType insert_pos = count;
+    for (FwSizeType i = 0; i < count; i++) {
         if (task->getPriority() > this->m_task_table[i]->getPriority()) {
             insert_pos = i;
             break;
         }
     }
 
-    // Shift every entry from insert_pos onward one slot to the right to make room, then place the new task.
-    // This avoids duplicating/overwriting existing entries.
-    for (FwSizeType i = this->m_index; i > insert_pos; i--) {
+    // Shift entries from insert_pos onward one slot to the right, then place the new task
+    for (FwSizeType i = count; i > insert_pos; i--) {
         this->m_task_table[i] = this->m_task_table[i - 1];
     }
     this->m_task_table[insert_pos] = task;
-    this->m_index++;
 }
 
 void TaskRunner::removeTask(Task* task) {
