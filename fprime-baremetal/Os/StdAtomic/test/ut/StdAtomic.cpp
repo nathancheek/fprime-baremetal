@@ -144,6 +144,36 @@ TEST(StdAtomic, DifferentTypes) {
     EXPECT_EQ(atomic_uint.load(), 150u);
 }
 
+TEST(StdAtomic, Exchange) {
+    TestStdAtomic::std::atomic<int> atomic_int(10);
+
+    // Test that exchange stores the new value and returns the previous one
+    int old = atomic_int.exchange(20);
+    EXPECT_EQ(old, 10);
+    EXPECT_EQ(atomic_int.load(), 20);
+}
+
+TEST(StdAtomic, MemoryOrderOverloads) {
+    TestStdAtomic::std::atomic<int> counter(0);
+
+    // Memory orders are accepted for interface compatibility and ignored
+    counter.store(5, TestStdAtomic::std::memory_order_release);
+    EXPECT_EQ(counter.load(TestStdAtomic::std::memory_order_acquire), 5);
+    EXPECT_EQ(counter.fetch_add(1, TestStdAtomic::std::memory_order_relaxed), 5);
+    EXPECT_EQ(counter.exchange(10, TestStdAtomic::std::memory_order_acq_rel), 6);
+
+    // Test the overload with separate success and failure orderings
+    int expected = 10;
+    EXPECT_TRUE(counter.compare_exchange_strong(expected, 20, TestStdAtomic::std::memory_order_acq_rel,
+                                                TestStdAtomic::std::memory_order_acquire));
+    EXPECT_EQ(counter.load(), 20);
+}
+
+TEST(StdAtomic, IsLockFree) {
+    TestStdAtomic::std::atomic<int> atomic_int(0);
+    EXPECT_TRUE(atomic_int.is_lock_free());
+}
+
 TEST(StdAtomic, CopySemantics) {
     // TestStdAtomic::std::atomic<int> atomic1(42);
 
